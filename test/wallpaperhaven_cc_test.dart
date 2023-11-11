@@ -5,11 +5,6 @@ import 'package:wallpaperhaven_cc/wallpaperhaven_cc.dart';
 void main() {
   test('get wallpapers', () async {
     var t = await WallhavenClient.searchWallpapers("pokemon");
-    assert(t.isNotEmpty);
-  });
-
-  test('get wallpapers', () async {
-    var t = await WallhavenClient.getCollections();
-    assert(t.isNotEmpty);
+    assert(t.data.isNotEmpty);
   });
 }

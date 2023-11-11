@@ -41,7 +41,7 @@ class WallhavenClient {
   }
 
   // A method that returns a list of wallpapers based on the search parameters
-  static Future<List<Wallpaper>> searchWallpapers(
+  static Future<WallpaperSearch> searchWallpapers(
     String query, {
     String categories = "111",
     String purity = "100",
@@ -74,7 +74,7 @@ class WallhavenClient {
     var response = await client.get(url);
     var data = _parseResponse(response);
     client.close();
-    return (data["data"] as List).map((item) => Wallpaper.fromJson(item)).toList();
+    return WallpaperSearch.fromJson(data);
   }
 
   /// Returns the details of a tag by its ID
