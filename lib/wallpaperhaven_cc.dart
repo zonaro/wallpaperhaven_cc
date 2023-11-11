@@ -8,7 +8,7 @@ class WallhavenClient {
   // The base URL for the API
   static const String _domain = 'wallhaven.cc';
   static const String _apiPath = "/api/v1";
-  
+
   // The API key for authentication
   static String apiKey = "";
 
@@ -114,14 +114,57 @@ class WallhavenClient {
   }
 
   /// Returns a list of wallpapers in a collection by its ID and the username of the owner
-  static Future<List<Wallpaper>> getCollectionWallpapers(String username, int id, {String purity = "100", int page = 1}) async {
+  static Future<WallpaperSearch> getCollectionWallpapers(String username, int id, {String purity = "100", int page = 1}) async {
     var params = _addApiKey({'purity': purity, 'page': page.toString()});
     var client = http.Client();
     var url = Uri.https(_domain, '$_apiPath/collections/$username/$id', params);
     var response = await client.get(url);
     var data = _parseResponse(response);
     client.close();
-    return (data as List).map((item) => Wallpaper.fromJson(item)).toList();
+    return data;
+  }
+}
+
+class WallpaperSearch {
+  List<Wallpaper> data;
+  Meta meta;
+
+  WallpaperSearch({required this.data, required this.meta});
+
+  factory WallpaperSearch.fromJson(Map<String, dynamic> json) {
+    return WallpaperSearch(
+      data: (json["data"] as List).map((item) => Wallpaper.fromJson(item)).toList(),
+      meta: Meta.fromJson(json["meta"]),
+    );
+  }
+}
+
+class Meta {
+  int currentPage;
+  int lastPage;
+  int perPage;
+  int total;
+  dynamic query;
+  String? seed;
+
+  Meta({
+    required this.currentPage,
+    required this.lastPage,
+    required this.perPage,
+    required this.total,
+    this.query,
+    this.seed,
+  });
+
+  factory Meta.fromJson(Map<String, dynamic> json) {
+    return Meta(
+      currentPage: json["current_page"],
+      lastPage: json["last_page"],
+      perPage: json["per_page"],
+      total: json["total"],
+      query: json["query"],
+      seed: json["seed"],
+    );
   }
 }
 
