@@ -1,18 +1,19 @@
+library wallhaven;
+
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 class WallhavenClient {
   // The base URL for the API
-  static const String _baseUrl = 'https://wallhaven.cc/api/v1';
-
+  static const String _domain = 'wallhaven.cc';
+  static const String _apiPath = "/api/v1";
+  
   // The API key for authentication
   static String apiKey = "";
 
-  // The HTTP client for making requests
-  late http.Client _client = _client = http.Client();
-
   // A helper method that adds the API key to the query parameters if present
-  Map<String, String> _addApiKey(Map<String, String> params) {
+  static Map<String, String> _addApiKey(Map<String, String> params) {
     if (apiKey.trim().isNotEmpty) {
       params['apikey'] = apiKey;
     }
@@ -20,7 +21,7 @@ class WallhavenClient {
   }
 
   // A helper method that parses the JSON response and throws an exception if there is an error
-  dynamic _parseResponse(http.Response response) {
+  static dynamic _parseResponse(http.Response response) {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -29,27 +30,30 @@ class WallhavenClient {
   }
 
   // A method that returns the details of a wallpaper by its ID
-  Future<Wallpaper> getWallpaper(String id) async {
-    var url = Uri.https(_baseUrl, '/w/$id', _addApiKey({}));
-    var response = await _client.get(url);
+  static Future<Wallpaper> getWallpaper(String id) async {
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/w/$id', _addApiKey({}));
+    var response = await client.get(url);
     var data = _parseResponse(response);
+    client.close();
+
     return Wallpaper.fromJson(data);
   }
 
   // A method that returns a list of wallpapers based on the search parameters
-  Future<List<Wallpaper>> searchWallpapers(
+  static Future<List<Wallpaper>> searchWallpapers(
     String query, {
-    String categories,
-    String purity,
-    String sorting,
-    String order,
-    String topRange,
-    String atLeast,
-    String resolutions,
-    String ratios,
-    String colors,
+    String categories = "111",
+    String purity = "100",
+    String sorting = "date_added",
+    String order = "desc",
+    String topRange = "",
+    String atLeast = "",
+    String resolutions = "",
+    String ratios = "",
+    String colors = "",
     int page = 1,
-    String seed,
+    String seed = "",
   }) async {
     var params = _addApiKey({
       'q': query,
@@ -64,55 +68,60 @@ class WallhavenClient {
       'colors': colors,
       'page': page.toString(),
       'seed': seed,
-    });
-    var url = Uri.https(_baseUrl, '/search', params);
-    var response = await _client.get(url);
+    }..removeWhere((key, value) => value.trim().isEmpty));
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/search', params);
+    var response = await client.get(url);
     var data = _parseResponse(response);
-    return (data as List).map((item) => Wallpaper.fromJson(item)).toList();
+    client.close();
+    return (data["data"] as List).map((item) => Wallpaper.fromJson(item)).toList();
   }
 
-  // A method that returns the details of a tag by its ID
-  Future<Tag> getTag(int id) async {
-    var url = Uri.https(_baseUrl, '/tag/$id', _addApiKey({}));
-    var response = await _client.get(url);
+  /// Returns the details of a tag by its ID
+  static Future<Tag> getTag(int id) async {
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/tag/$id', _addApiKey({}));
+    var response = await client.get(url);
     var data = _parseResponse(response);
+    client.close();
     return Tag.fromJson(data);
   }
 
-  // A method that returns the user's settings
-  Future<Settings> getSettings() async {
-    if (apiKey == null) {
+  /// Returns the user's settings
+  static Future<Settings> getSettings() async {
+    if (apiKey.trim().isEmpty) {
       throw Exception('API key is required for this method');
     }
-    var url = Uri.https(_baseUrl, '/settings', _addApiKey({}));
-    var response = await _client.get(url);
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/settings', _addApiKey({}));
+    var response = await client.get(url);
     var data = _parseResponse(response);
+    client.close();
     return Settings.fromJson(data);
   }
 
   // A method that returns a list of collections for the user
-  Future<List<Collection>> getCollections() async {
-    if (apiKey == null) {
+  static Future<List<Collection>> getCollections() async {
+    if (apiKey.trim().isEmpty) {
       throw Exception('API key is required for this method');
     }
-    var url = Uri.https(_baseUrl, '/collections', _addApiKey({}));
-    var response = await _client.get(url);
+    var url = Uri.https(_domain, '$_apiPath/collections', _addApiKey({}));
+    var client = http.Client();
+    var response = await client.get(url);
     var data = _parseResponse(response);
+    client.close();
     return (data as List).map((item) => Collection.fromJson(item)).toList();
   }
 
-  // A method that returns a list of wallpapers in a collection by its ID and the username of the owner
-  Future<List<Wallpaper>> getCollectionWallpapers(String username, int id, {String purity, int page}) async {
-    var params = _addApiKey({'purity': purity, 'page': page?.toString()});
-    var url = Uri.https(_baseUrl, '/collections/$username/$id', params);
-    var response = await _client.get(url);
+  /// Returns a list of wallpapers in a collection by its ID and the username of the owner
+  static Future<List<Wallpaper>> getCollectionWallpapers(String username, int id, {String purity = "100", int page = 1}) async {
+    var params = _addApiKey({'purity': purity, 'page': page.toString()});
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/collections/$username/$id', params);
+    var response = await client.get(url);
     var data = _parseResponse(response);
+    client.close();
     return (data as List).map((item) => Wallpaper.fromJson(item)).toList();
-  }
-
-  // A method that closes the HTTP client
-  void close() {
-    _client.close();
   }
 }
 
@@ -134,8 +143,7 @@ class Wallpaper {
   String createdAt;
   List<String> colors;
   String path;
-  Map<String, String> thumbs;
-  List<Tag> tags;
+  Thumbs thumbs;
 
   Wallpaper({
     required this.id,
@@ -156,7 +164,6 @@ class Wallpaper {
     required this.colors,
     required this.path,
     required this.thumbs,
-    required this.tags,
   });
 
   factory Wallpaper.fromJson(Map<String, dynamic> json) {
@@ -178,10 +185,23 @@ class Wallpaper {
       createdAt: json['created_at'],
       colors: List<String>.from(json['colors'].map((x) => x)),
       path: json['path'],
-      thumbs: Map<String, String>.from(json['thumbs']),
-      tags: List<Tag>.from(json['tags'].map((x) => Tag.fromJson(x))),
+      thumbs: Thumbs.fromJson(json['thumbs']),
     );
   }
+}
+
+class Thumbs {
+  String large;
+  String original;
+  String small;
+
+  Thumbs({
+    required this.large,
+    required this.original,
+    required this.small,
+  });
+
+  factory Thumbs.fromJson(Map<String, dynamic> json) => Thumbs(large: json["large"], original: json["original"], small: json["small"]);
 }
 
 class Tag {
