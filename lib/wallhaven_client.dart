@@ -41,6 +41,21 @@ class WallhavenClient {
   }
 
   // A method that returns a list of wallpapers based on the search parameters
+  static Future<WallpaperSearch> searchWallpapersWith(WallpaperSearchParameters params) async => await searchWallpapers(
+        params.query,
+        categories: params.categoryString,
+        purity: params.purityString,
+        sorting: params.sorting,
+        order: params.order,
+        topRange: params.toprange,
+        atLeast: params.atLeast,
+        resolutions: params.resolutions,
+        ratios: params.ratios,
+        colors: params.colors,
+        page: params.page,
+        seed: params.seed,
+      );
+
   static Future<WallpaperSearch> searchWallpapers(
     String query, {
     String categories = "111",
@@ -169,10 +184,17 @@ class Meta {
 }
 
 class WallpaperSearchParameters {
-
+  String query = '';
   String sorting = 'date_added';
   String order = 'asc';
   String toprange = '1M';
+  int page = 1;
+  String atLeast = "";
+  String resolutions = "";
+  String ratios = "";
+  String colors = "";
+
+  String seed = '';
 
   Map<String, int> categories = {
     'General': 1,
@@ -187,7 +209,7 @@ class WallpaperSearchParameters {
     'Sketchy': 0,
     'NSFW': 0,
   };
-  
+
   String get purityString => purity.values.join("");
 }
 
