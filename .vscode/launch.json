@@ -5,18 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "wallpaperhaven_cc",
+            "name": "wallhaven_cc",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "wallpaperhaven_cc (profile mode)",
+            "name": "wallhaven_cc (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "wallpaperhaven_cc (release mode)",
+            "name": "wallhaven_cc (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

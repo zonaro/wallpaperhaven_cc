@@ -1,7 +1,7 @@
 
-# WallpaperHaven
+# WallHaven
 
-This is a Flutter app that allows users to browse and download high-quality wallpapers from [WallpaperHaven](https://wallpaperhaven.com/).
+This is a Flutter app that allows users to browse and download high-quality wallpapers from [WallHaven](https://wallhaven.com/).
 
 ## Features
 
@@ -20,8 +20,8 @@ TODO: Add screenshots of the app here.
 
 To run this app, you need to have [Flutter](https://flutter.dev/) installed on your machine. Follow these steps to install and run the app:
 
-- Clone this repository to your local machine using `git clone https://github.com/zonaro/wallpaperhaven_cc.git`
-- Navigate to the project directory using `cd wallpaperhaven_cc`
+- Clone this repository to your local machine using `git clone https://github.com/zonaro/wallhaven_cc.git`
+- Navigate to the project directory using `cd wallhaven_cc`
 - Run `flutter pub get` to install the dependencies
 - Run `flutter run` to launch the app on your device or emulator
 

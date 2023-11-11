@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:wallpaperhaven_cc/wallpaperhaven_cc.dart';
+import 'package:wallhaven_cc/wallhaven_client.dart';
 
 void main() {
   test('get wallpapers', () async {

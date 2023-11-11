@@ -1,7 +1,7 @@
 library wallhaven;
 
 import 'dart:convert';
-
+ 
 import 'package:http/http.dart' as http;
 
 class WallhavenClient {
@@ -184,7 +184,7 @@ class Wallpaper {
   int fileSize;
   String fileType;
   String createdAt;
-  List<String> colors;
+  List<String> colors; 
   String path;
   Thumbs thumbs;
 
