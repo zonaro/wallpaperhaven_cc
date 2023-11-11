@@ -1,7 +1,7 @@
 library wallhaven;
 
 import 'dart:convert';
- 
+
 import 'package:http/http.dart' as http;
 
 class WallhavenClient {
@@ -168,6 +168,29 @@ class Meta {
   }
 }
 
+class WallpaperSearchParameters {
+
+  String sorting = 'date_added';
+  String order = 'asc';
+  String toprange = '1M';
+
+  Map<String, int> categories = {
+    'General': 1,
+    'Anime': 1,
+    'People': 1,
+  };
+
+  String get categoryString => categories.values.join("");
+
+  Map<String, int> purity = {
+    'SFW': 1,
+    'Sketchy': 0,
+    'NSFW': 0,
+  };
+  
+  String get purityString => purity.values.join("");
+}
+
 class Wallpaper {
   String id;
   String url;
@@ -184,7 +207,7 @@ class Wallpaper {
   int fileSize;
   String fileType;
   String createdAt;
-  List<String> colors; 
+  List<String> colors;
   String path;
   Thumbs thumbs;
 
