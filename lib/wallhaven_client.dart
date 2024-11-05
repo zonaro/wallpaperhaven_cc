@@ -219,7 +219,7 @@ class WallhavenClient {
         categories: params.categoryString,
         purity: params.purityString,
         sorting: params.sorting.toString(),
-        order: params.order,
+        order: params.order.toString(),
         topRange: params.toprange,
         atLeast: params.atLeast,
         resolutions: params.resolutions,
@@ -349,6 +349,21 @@ class WallpaperCollection {
   }
 }
 
+enum WallpaperOrder {
+  asc,
+  desc;
+
+  @override
+  String toString() {
+    switch (this) {
+      case WallpaperOrder.asc:
+        return 'asc';
+      case WallpaperOrder.desc:
+        return 'desc';
+    }
+  }
+}
+
 enum WallpaperPurity {
   sfw,
   sketchy,
@@ -372,7 +387,7 @@ class WallpaperSearch {
 class WallpaperSearchParameters {
   String query = '';
   WallpaperSorting sorting = WallpaperSorting.dateAdded;
-  String order = 'asc';
+  WallpaperOrder order = WallpaperOrder.desc;
   String toprange = '1M';
   int page = 1;
   String atLeast = "";
