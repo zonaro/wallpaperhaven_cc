@@ -1,8 +1,107 @@
 library wallhaven;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+
+class Meta {
+  int currentPage;
+  int lastPage;
+  int perPage;
+  int total;
+  dynamic query;
+  String? seed;
+
+  Meta({
+    required this.currentPage,
+    required this.lastPage,
+    required this.perPage,
+    required this.total,
+    this.query,
+    this.seed,
+  });
+
+  factory Meta.fromJson(Map<String, dynamic> json) {
+    return Meta(
+      currentPage: json["current_page"],
+      lastPage: json["last_page"],
+      perPage: json["per_page"],
+      total: json["total"],
+      query: json["query"],
+      seed: json["seed"],
+    );
+  }
+}
+
+class Settings {
+  String purity;
+  String categories;
+  String resolutions;
+  String toplistRange;
+
+  Settings({
+    required this.purity,
+    required this.categories,
+    required this.resolutions,
+    required this.toplistRange,
+  });
+
+  factory Settings.fromJson(Map<String, dynamic> json) {
+    return Settings(
+      purity: json['purity'],
+      categories: json['categories'],
+      resolutions: json['resolutions'],
+      toplistRange: json['toplist_range'],
+    );
+  }
+}
+
+class Tag {
+  int id;
+  String name;
+  String alias;
+  int categoryId;
+  String category;
+  String purity;
+  String createdAt;
+
+  Tag({
+    required this.id,
+    required this.name,
+    required this.alias,
+    required this.categoryId,
+    required this.category,
+    required this.purity,
+    required this.createdAt,
+  });
+
+  factory Tag.fromJson(Map<String, dynamic> json) {
+    return Tag(
+      id: json['id'],
+      name: json['name'],
+      alias: json['alias'],
+      categoryId: json['category_id'],
+      category: json['category'],
+      purity: json['purity'],
+      createdAt: json['created_at'],
+    );
+  }
+}
+
+class Thumbs {
+  String large;
+  String original;
+  String small;
+
+  Thumbs({
+    required this.large,
+    required this.original,
+    required this.small,
+  });
+
+  factory Thumbs.fromJson(Map<String, dynamic> json) => Thumbs(large: json["large"], original: json["original"], small: json["small"]);
+}
 
 class WallhavenClient {
   // The base URL for the API
@@ -12,21 +111,59 @@ class WallhavenClient {
   // The API key for authentication
   static String apiKey = "";
 
-  // A helper method that adds the API key to the query parameters if present
-  static Map<String, String> _addApiKey(Map<String, String> params) {
-    if (apiKey.trim().isNotEmpty) {
-      params['apikey'] = apiKey;
-    }
-    return params;
+  WallhavenClient._();
+
+  /// Download the wallpaper with the given ID
+  static Future<Uint8List> download(String id) async {
+    var wallpaper = await getWallpaper(id);
+    return await wallpaper.download();
   }
 
-  // A helper method that parses the JSON response and throws an exception if there is an error
-  static dynamic _parseResponse(http.Response response) {
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('API error: ${response.statusCode} - ${response.reasonPhrase}');
+  // A method that returns a list of collections for the user
+  static Future<List<WallpaperCollection>> getCollections() async {
+    if (apiKey.trim().isEmpty) {
+      throw Exception('API key is required for this method');
     }
+    var url = Uri.https(_domain, '$_apiPath/collections', _addApiKey({}));
+    var client = http.Client();
+    var response = await client.get(url);
+    var data = _parseResponse(response);
+    client.close();
+    return (data as List).map((item) => WallpaperCollection.fromJson(item)).toList();
+  }
+
+  /// Returns a list of wallpapers in a collection by its ID and the username of the owner
+  static Future<WallpaperSearch> getCollectionWallpapers(String username, int id, {String purity = "100", int page = 1}) async {
+    var params = _addApiKey({'purity': purity, 'page': page.toString()});
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/collections/$username/$id', params);
+    var response = await client.get(url);
+    var data = _parseResponse(response);
+    client.close();
+    return data;
+  }
+
+  /// Returns the user's settings
+  static Future<Settings> getSettings() async {
+    if (apiKey.trim().isEmpty) {
+      throw Exception('API key is required for this method');
+    }
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/settings', _addApiKey({}));
+    var response = await client.get(url);
+    var data = _parseResponse(response);
+    client.close();
+    return Settings.fromJson(data);
+  }
+
+  /// Returns the details of a tag by its ID
+  static Future<Tag> getTag(int id) async {
+    var client = http.Client();
+    var url = Uri.https(_domain, '$_apiPath/tag/$id', _addApiKey({}));
+    var response = await client.get(url);
+    var data = _parseResponse(response);
+    client.close();
+    return Tag.fromJson(data);
   }
 
   // A method that returns the details of a wallpaper by its ID
@@ -39,22 +176,6 @@ class WallhavenClient {
 
     return Wallpaper.fromJson(data);
   }
-
-  // A method that returns a list of wallpapers based on the search parameters
-  static Future<WallpaperSearch> searchWallpapersWith(WallpaperSearchParameters params) async => await searchWallpapers(
-        params.query,
-        categories: params.categoryString,
-        purity: params.purityString,
-        sorting: params.sorting,
-        order: params.order,
-        topRange: params.toprange,
-        atLeast: params.atLeast,
-        resolutions: params.resolutions,
-        ratios: params.ratios,
-        colors: params.colors,
-        page: params.page,
-        seed: params.seed,
-      );
 
   static Future<WallpaperSearch> searchWallpapers(
     String query, {
@@ -92,125 +213,38 @@ class WallhavenClient {
     return WallpaperSearch.fromJson(data);
   }
 
-  /// Returns the details of a tag by its ID
-  static Future<Tag> getTag(int id) async {
-    var client = http.Client();
-    var url = Uri.https(_domain, '$_apiPath/tag/$id', _addApiKey({}));
-    var response = await client.get(url);
-    var data = _parseResponse(response);
-    client.close();
-    return Tag.fromJson(data);
-  }
+  // A method that returns a list of wallpapers based on the search parameters
+  static Future<WallpaperSearch> searchWallpapersWith(WallpaperSearchParameters params) async => await searchWallpapers(
+        params.query,
+        categories: params.categoryString,
+        purity: params.purityString,
+        sorting: params.sorting,
+        order: params.order,
+        topRange: params.toprange,
+        atLeast: params.atLeast,
+        resolutions: params.resolutions,
+        ratios: params.ratios,
+        colors: params.colors,
+        page: params.page,
+        seed: params.seed,
+      );
 
-  /// Returns the user's settings
-  static Future<Settings> getSettings() async {
-    if (apiKey.trim().isEmpty) {
-      throw Exception('API key is required for this method');
+  // A helper method that adds the API key to the query parameters if present
+  static Map<String, String> _addApiKey(Map<String, String> params) {
+    if (apiKey.trim().isNotEmpty) {
+      params['apikey'] = apiKey;
     }
-    var client = http.Client();
-    var url = Uri.https(_domain, '$_apiPath/settings', _addApiKey({}));
-    var response = await client.get(url);
-    var data = _parseResponse(response);
-    client.close();
-    return Settings.fromJson(data);
+    return params;
   }
 
-  // A method that returns a list of collections for the user
-  static Future<List<Collection>> getCollections() async {
-    if (apiKey.trim().isEmpty) {
-      throw Exception('API key is required for this method');
+  // A helper method that parses the JSON response and throws an exception if there is an error
+  static dynamic _parseResponse(http.Response response) {
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('API error: ${response.statusCode} - ${response.reasonPhrase}');
     }
-    var url = Uri.https(_domain, '$_apiPath/collections', _addApiKey({}));
-    var client = http.Client();
-    var response = await client.get(url);
-    var data = _parseResponse(response);
-    client.close();
-    return (data as List).map((item) => Collection.fromJson(item)).toList();
   }
-
-  /// Returns a list of wallpapers in a collection by its ID and the username of the owner
-  static Future<WallpaperSearch> getCollectionWallpapers(String username, int id, {String purity = "100", int page = 1}) async {
-    var params = _addApiKey({'purity': purity, 'page': page.toString()});
-    var client = http.Client();
-    var url = Uri.https(_domain, '$_apiPath/collections/$username/$id', params);
-    var response = await client.get(url);
-    var data = _parseResponse(response);
-    client.close();
-    return data;
-  }
-}
-
-class WallpaperSearch {
-  List<Wallpaper> data;
-  Meta meta;
-
-  WallpaperSearch({required this.data, required this.meta});
-
-  factory WallpaperSearch.fromJson(Map<String, dynamic> json) {
-    return WallpaperSearch(
-      data: (json["data"] as List).map((item) => Wallpaper.fromJson(item)).toList(),
-      meta: Meta.fromJson(json["meta"]),
-    );
-  }
-}
-
-class Meta {
-  int currentPage;
-  int lastPage;
-  int perPage;
-  int total;
-  dynamic query;
-  String? seed;
-
-  Meta({
-    required this.currentPage,
-    required this.lastPage,
-    required this.perPage,
-    required this.total,
-    this.query,
-    this.seed,
-  });
-
-  factory Meta.fromJson(Map<String, dynamic> json) {
-    return Meta(
-      currentPage: json["current_page"],
-      lastPage: json["last_page"],
-      perPage: json["per_page"],
-      total: json["total"],
-      query: json["query"],
-      seed: json["seed"],
-    );
-  }
-}
-
-class WallpaperSearchParameters {
-  String query = '';
-  String sorting = 'date_added';
-  String order = 'asc';
-  String toprange = '1M';
-  int page = 1;
-  String atLeast = "";
-  String resolutions = "";
-  String ratios = "";
-  String colors = "";
-
-  String seed = '';
-
-  Map<String, int> categories = {
-    'General': 1,
-    'Anime': 1,
-    'People': 1,
-  };
-
-  String get categoryString => categories.values.join("");
-
-  Map<String, int> purity = {
-    'SFW': 1,
-    'Sketchy': 0,
-    'NSFW': 0,
-  };
-
-  String get purityString => purity.values.join("");
 }
 
 class Wallpaper {
@@ -271,67 +305,32 @@ class Wallpaper {
       fileSize: json['file_size'],
       fileType: json['file_type'],
       createdAt: json['created_at'],
-      colors: List<String>.from(json['colors'].map((x) => x)),
+      colors: List<String>.from(json['colors']),
       path: json['path'],
       thumbs: Thumbs.fromJson(json['thumbs']),
     );
   }
-}
 
-class Thumbs {
-  String large;
-  String original;
-  String small;
-
-  Thumbs({
-    required this.large,
-    required this.original,
-    required this.small,
-  });
-
-  factory Thumbs.fromJson(Map<String, dynamic> json) => Thumbs(large: json["large"], original: json["original"], small: json["small"]);
-}
-
-class Tag {
-  int id;
-  String name;
-  String alias;
-  int categoryId;
-  String category;
-  String purity;
-  String createdAt;
-
-  Tag({
-    required this.id,
-    required this.name,
-    required this.alias,
-    required this.categoryId,
-    required this.category,
-    required this.purity,
-    required this.createdAt,
-  });
-
-  factory Tag.fromJson(Map<String, dynamic> json) {
-    return Tag(
-      id: json['id'],
-      name: json['name'],
-      alias: json['alias'],
-      categoryId: json['category_id'],
-      category: json['category'],
-      purity: json['purity'],
-      createdAt: json['created_at'],
-    );
+  Future<Uint8List> download() async {
+    final response = await http.get(Uri.parse(path));
+    return response.bodyBytes;
   }
 }
 
-class Collection {
+enum WallpaperCategory {
+  general,
+  anime,
+  people,
+}
+
+class WallpaperCollection {
   String id;
   String label;
   int count;
   String public;
   String url;
 
-  Collection({
+  WallpaperCollection({
     required this.id,
     required this.label,
     required this.count,
@@ -339,8 +338,8 @@ class Collection {
     required this.url,
   });
 
-  factory Collection.fromJson(Map<String, dynamic> json) {
-    return Collection(
+  factory WallpaperCollection.fromJson(Map<String, dynamic> json) {
+    return WallpaperCollection(
       id: json['id'],
       label: json['label'],
       count: json['count'],
@@ -350,25 +349,56 @@ class Collection {
   }
 }
 
-class Settings {
-  String purity;
-  String categories;
-  String resolutions;
-  String toplistRange;
+enum WallpaperPurity {
+  sfw,
+  sketchy,
+  nsfw,
+}
 
-  Settings({
-    required this.purity,
-    required this.categories,
-    required this.resolutions,
-    required this.toplistRange,
-  });
+class WallpaperSearch {
+  List<Wallpaper> data;
+  Meta meta;
 
-  factory Settings.fromJson(Map<String, dynamic> json) {
-    return Settings(
-      purity: json['purity'],
-      categories: json['categories'],
-      resolutions: json['resolutions'],
-      toplistRange: json['toplist_range'],
+  WallpaperSearch({required this.data, required this.meta});
+
+  factory WallpaperSearch.fromJson(Map<String, dynamic> json) {
+    return WallpaperSearch(
+      data: (json["data"] as List).map((item) => Wallpaper.fromJson(item)).toList(),
+      meta: Meta.fromJson(json["meta"]),
     );
+  }
+}
+
+class WallpaperSearchParameters {
+  String query = '';
+  String sorting = 'date_added';
+  String order = 'asc';
+  String toprange = '1M';
+  int page = 1;
+  String atLeast = "";
+  String resolutions = "";
+  String ratios = "";
+  String colors = "";
+
+  String seed = '';
+
+  List<WallpaperCategory> categories = [WallpaperCategory.general, WallpaperCategory.anime, WallpaperCategory.people];
+
+  List<WallpaperPurity> purities = [WallpaperPurity.sfw];
+
+  String get categoryString {
+    return [
+      categories.contains(WallpaperCategory.general) ? '1' : '0',
+      categories.contains(WallpaperCategory.anime) ? '1' : '0',
+      categories.contains(WallpaperCategory.people) ? '1' : '0',
+    ].join('');
+  }
+
+  String get purityString {
+    return [
+      purities.contains(WallpaperPurity.sfw) ? '1' : '0',
+      purities.contains(WallpaperPurity.sketchy) ? '1' : '0',
+      purities.contains(WallpaperPurity.nsfw) ? '1' : '0',
+    ].join('');
   }
 }
